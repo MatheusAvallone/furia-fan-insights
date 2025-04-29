@@ -16,3 +16,4 @@ class Fan(FanBase):
 
     class Config:
         orm_mode = True
+

@@ -54,6 +54,19 @@ def obter_fan(fan_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Fã não encontrado")
     return fan
 
+@app.put("/fans/{fan_id}", response_model=schemas.Fan)
+def atualizar_fan(fan_id: int, fan: schemas.FanCreate, db: Session = Depends(get_db)):
+    db_fan = db.query(models.FuriaFan).filter(models.FuriaFan.id == fan_id).first()
+    if not db_fan:
+        raise HTTPException(status_code=404, detail="Fã não encontrado")
+
+    for key, value in fan.dict().items():
+        setattr(db_fan, key, value)  # Atualiza os campos do fã
+    
+    db.commit()
+    db.refresh(db_fan)
+    return db_fan
+
 # Rota para filtrar fãs
 @app.get("/fans/filter/")
 def filtrar_fans(localizacao: str = None, jogo_favorito: str = None, db: Session = Depends(get_db)):
@@ -75,3 +88,24 @@ def get_tweets_por_fan(fan_id: int, db: Session = Depends(get_db)):
     
     tweets = buscar_tweets(sobre_o_que=fan.nome)
     return tweets
+
+# Rota para listar todos os fãs
+@app.get("/fans/", response_model=list[schemas.Fan])
+def listar_fans(db: Session = Depends(get_db)):
+    return db.query(models.FuriaFan).all()
+
+# Rota para deletar fã por ID
+@app.delete("/fans/{fan_id}")
+def deletar_fan(fan_id: int, db: Session = Depends(get_db)):
+    fan = db.query(models.FuriaFan).filter(models.FuriaFan.id == fan_id).first()
+    if not fan:
+        raise HTTPException(status_code=404, detail="Fã não encontrado")
+
+    db.delete(fan)
+    db.commit()
+    return {"mensagem": "Fã deletado com sucesso"}
+
+
+
+
+
