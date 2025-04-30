@@ -128,13 +128,37 @@ with st.expander("✏️ Editar Informações de um Fã", expanded=False):
                         "localizacao": localizacao_editada
                     }
 
-                    # Simula o envio da atualização
-                    fan_info.update(atualizado)
+                    try:
+                        resposta = requests.put(
+                            f"{API_URL}/fans/{fan_info['id']}",
+                            json=atualizado  # envia os dados atualizados
+                        )
+                        if resposta.status_code == 200:
+                            st.success("Fã Atualizado com sucesso!")
+                            # Atualiza a lista local removendo o antigo e adicionando o novo
+                            if "fans" not in st.session_state:
+                                st.session_state.fans = []
+                            st.session_state.fans = [
+                                f for f in st.session_state.fans if f["id"] != fan_info["id"]
+                            ] + [fan_info]
+                        else:
+                            st.error(f"Erro ao atualizar fã: {resposta.status_code}")
+                    except Exception as e:
+                        st.error(f"Erro ao se conectar com a API: {e}")
 
-                    st.session_state.fans = [fan if fan["nome"] != fan_info["nome"] else fan_info for fan in st.session_state.fans]
+                    # Garante que a lista está inicializada
+                    if "fans" not in st.session_state:
+                        st.session_state.fans = []
+
+                    # Atualiza o fã na lista
+                    st.session_state.fans = [
+                        fan if fan["nome"] != fan_info["nome"] else fan_info
+                        for fan in st.session_state.fans
+                    ]
+
                     st.success("Fã atualizado com sucesso!")
 
-                # Deletar fã fora do formulário
+                    # Deletar fã fora do formulário
             if st.button("🗑️ Deletar Fã", use_container_width=True, type="secondary"):
                 try:
                     resposta = requests.delete(f"{API_URL}/fans/{fan_info['id']}")

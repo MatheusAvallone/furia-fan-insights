@@ -1,9 +1,7 @@
-# models.py
-
 from sqlalchemy import Column, Integer, String
-from database import Base
+from Database.Context.database import Base
 
-class FuriaFan(Base):
+class FuriaFanEntity(Base):
     __tablename__ = "furia_fans"
 
     id = Column(Integer, primary_key=True, index=True)
