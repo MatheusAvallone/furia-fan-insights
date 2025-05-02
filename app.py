@@ -26,7 +26,7 @@ def buscar_fans():
 
 # --- 1. Formulário de Cadastro ---
 
-with st.expander("👤 Cadastrar novo fã", expanded=True):
+with st.expander("👤 Cadastrar novo Fã", expanded=True):
     with st.form(key="form_fan", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
