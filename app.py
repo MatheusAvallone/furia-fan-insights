@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
+from streamlit_js_eval import streamlit_js_eval
 
 API_URL = "http://127.0.0.1:8000"
 
@@ -32,7 +33,7 @@ with st.expander("👤 Cadastrar novo fã", expanded=True):
             nome = st.text_input("Nome", placeholder="Digite o nome do fã")
             idade = st.number_input("Idade", min_value=0, max_value=100, step=1)
         with col2:
-            jogo_favorito = st.selectbox("Jogo Favorito", ["Valorant", "CS2", "League of Legends", "Outro"])
+            jogo_favorito = st.selectbox("Jogo Favorito", ["Valorant", "CS2", "League of Legends", "Outro", "FORTNITE", "Rainbow Six Siege", "FREE FIRE"])
             localizacao = st.text_input("Localização", placeholder="Onde você mora?")
 
         submit_button = st.form_submit_button(label="Cadastrar Fã", use_container_width=True)
@@ -56,11 +57,12 @@ with st.expander("👤 Cadastrar novo fã", expanded=True):
                         st.session_state.fans = []
                     # Não sobrescreve, apenas adiciona o novo fã à lista existente
                     st.session_state.fans.append(novo_fan)
-                    
+                    streamlit_js_eval(js_expressions="parent.window.location.reload()")
                 else:
                     st.error(f"Erro ao cadastrar fã: {res.status_code}. Resposta: {res.text}")
             except Exception as e:
                 st.error(f"Erro ao se conectar com a API: {e}")
+            
 
 # --- 2. Buscar Fãs e Visualizar ---
 
@@ -110,7 +112,7 @@ with st.expander("✏️ Editar Informações de um Fã", expanded=False):
                 nome_editado = st.text_input("Nome", value=fan_info["nome"])
                 idade_editada = st.number_input("Idade", value=fan_info["idade"], min_value=0, max_value=120, step=1)
 
-                jogos_validos = ["Valorant", "CS2", "League of Legends", "Outro"]
+                jogos_validos = ["Valorant", "CS2", "League of Legends", "Outro", "FORTNITE", "Rainbow Six Siege", "FREE FIRE"]
                 jogo_atual = fan_info.get("jogo_favorito", "Outro")
                 if jogo_atual not in jogos_validos:
                     jogos_validos.append(jogo_atual)
@@ -156,7 +158,7 @@ with st.expander("✏️ Editar Informações de um Fã", expanded=False):
                         for fan in st.session_state.fans
                     ]
 
-                    st.success("Fã atualizado com sucesso!")
+                    streamlit_js_eval(js_expressions="parent.window.location.reload()")
 
                     # Deletar fã fora do formulário
             if st.button("🗑️ Deletar Fã", use_container_width=True, type="secondary"):
@@ -164,44 +166,34 @@ with st.expander("✏️ Editar Informações de um Fã", expanded=False):
                     resposta = requests.delete(f"{API_URL}/fans/{fan_info['id']}")
                     if resposta.status_code == 200:
                         st.success("Fã deletado com sucesso!")
-                        # Remove o fã da lista local
+                        # Garante que 'fans' está inicializado
+                        if "fans" not in st.session_state:
+                            st.session_state.fans = []
+
+                        # Atualiza/remover fã com base no ID
                         st.session_state.fans = [f for f in st.session_state.fans if f["id"] != fan_info["id"]]
+                        streamlit_js_eval(js_expressions="parent.window.location.reload()")
                     else:
                         st.error(f"Erro ao deletar fã: {resposta.status_code}")
                 except Exception as e:
                     st.error(f"Erro ao se conectar com a API: {e}")
 
-# --- 5. Filtros Avançados ---
+            # --- 5. Ranking dos Jogos Mais Populares ---
 
-with st.expander("🎯 Filtros Avançados por Localização e Jogo"):
-    def obter_fans_filtrados(localizacao: str = None, jogo_favorito: str = None):
-        params = {}
-        if localizacao:
-            params["localizacao"] = localizacao
-        if jogo_favorito:
-            params["jogo_favorito"] = jogo_favorito
+with st.expander("🏆 Ranking dos Jogos Mais Populares"):
+    
+    if dados_fans:
+        ranking = df['jogo_favorito'].value_counts().reset_index()
+        ranking.columns = ['Jogo', 'Número de Fãs']
+        fig_ranking = px.bar(
+            ranking,
+            x='Número de Fãs',
+            y='Jogo',
+            orientation='h',
+            color='Número de Fãs',
+            title="Ranking de Jogos Favoritos entre os Fãs",
+            color_continuous_scale='reds'
+        )
+        st.plotly_chart(fig_ranking, use_container_width=True)
+    
 
-        response = requests.get(f"{API_URL}/fans/filter/", params=params)
-        return response.json()
-
-    localizacao_input = st.text_input("Filtrar por Localização")
-    jogo_input = st.text_input("Filtrar por Jogo Favorito")
-
-    if st.button("Aplicar Filtros"):
-        filtrados = obter_fans_filtrados(localizacao_input, jogo_input)
-        if filtrados:
-            st.write("Fãs encontrados:", filtrados)
-        else:
-            st.warning("Nenhum fã encontrado com os filtros aplicados.")
-
-# --- 6. Gráfico adicional fixo (exemplo) ---
-
-with st.expander("📊 Gráfico de Exemplo Fixo"):
-    fans_data = [
-        {"nome": "Lucas", "jogo_favorito": "League of Legends", "idade": 25},
-        {"nome": "Mariana", "jogo_favorito": "Valorant", "idade": 22},
-        {"nome": "Carlos", "jogo_favorito": "League of Legends", "idade": 28}
-    ]
-    df_exemplo = pd.DataFrame(fans_data)
-    fig = px.histogram(df_exemplo, x="jogo_favorito", color="idade", title="Idade por Jogo Favorito (Exemplo)")
-    st.plotly_chart(fig, use_container_width=True)
